@@ -1,11 +1,12 @@
 # main.py
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import Optional, List
 import os
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 # Global variable to hold the llama model
 llm = None
@@ -47,31 +48,14 @@ async def lifespan(app: FastAPI):
     llm = None
 
 
-app = FastAPI(title="exRPG Workout API", lifespan=lifespan)
-
-# CORS configuration for frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="Workout Generator", lifespan=lifespan)
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def read_root():
-    return {"message": "exRPG Workout API", "status": "running"}
-
-
-@app.get("/health")
-def health_check():
-    """Health check endpoint for frontend"""
-    return {
-        "status": "healthy",
-        "message": "API is running",
-        "ai_available": llm is not None
-    }
+    """Serve the main HTML page"""
+    template_path = Path(__file__).parent / "templates" / "index.html"
+    return template_path.read_text()
 
 
 # Pydantic models
@@ -83,26 +67,15 @@ class Exercise(BaseModel):
     notes: Optional[str] = None
 
 
-class WorkoutPlanResponse(BaseModel):
-    exercises: List[Exercise]
-    notes: Optional[str] = None
-
-
 class Item(BaseModel):
     name: str
     prompt: str | None = None
 
 
-class WorkoutPromptRequest(BaseModel):
-    prompt: str
-
-
 # AI-powered workout generation endpoint
-@app.post("/ai/", response_model=dict)
+@app.post("/ai/")
 async def generate_workout_ai(request: Item):
-    """
-    Generate a workout plan using llama.cpp based on user prompt
-    """
+    """Generate a workout plan using llama.cpp based on user prompt"""
     if llm is None:
         # Return mock data when model is not available
         return {
