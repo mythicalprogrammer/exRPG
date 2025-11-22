@@ -17,7 +17,7 @@ class Item(BaseModel):
 
 
 # Define a POST endpoint
-@app.post("/trainerAI/")
+@app.post("/ai/")
 async def create_item(item: Item):
     """
     Receives an Item object in the request body and returns it.
