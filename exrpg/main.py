@@ -1,6 +1,6 @@
 # main.py
-from typing import Union
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -10,6 +10,17 @@ def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
+# Define a Pydantic model for the request body
+class Item(BaseModel):
+    name: str
+    prompt: str | None = None  # Optional field
+
+
+# Define a POST endpoint
+@app.post("/trainerAI/")
+async def create_item(item: Item):
+    """
+    Receives an Item object in the request body and returns it.
+    """
+    return {"Hello": "World"}
+    # return item
