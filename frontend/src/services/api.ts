@@ -21,7 +21,7 @@ export interface WorkoutPlanResponse {
 // Request a workout plan from llama.cpp via FastAPI
 export async function generateWorkoutPlan(prompt: string): Promise<WorkoutPlanResponse> {
   try {
-    const response = await api.post<WorkoutPlanResponse>('/workout/generate', {
+    const response = await api.post<WorkoutPlanResponse>('/ai', {
       prompt
     })
     return response.data
@@ -39,6 +39,29 @@ export async function checkApiHealth(): Promise<boolean> {
   } catch (error) {
     console.error('API health check failed:', error)
     return false
+  }
+}
+
+// TrainerAI endpoint
+export interface TrainerAIRequest {
+  name: string
+  prompt?: string
+}
+
+export interface TrainerAIResponse {
+  Hello: string
+}
+
+export async function sendToTrainerAI(name: string, prompt?: string): Promise<TrainerAIResponse> {
+  try {
+    const response = await api.post<TrainerAIResponse>('/ai', {
+      name,
+      prompt
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error calling TrainerAI:', error)
+    throw error
   }
 }
 

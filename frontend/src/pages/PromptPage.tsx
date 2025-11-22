@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { generateWorkoutPlan } from '../services/api'
+import { generateWorkoutPlan, sendToTrainerAI } from '../services/api'
 import { saveWorkout, saveWorkoutHistory } from '../services/db'
 import type { Workout, BodyPart } from '../types'
 
@@ -22,6 +22,9 @@ export default function PromptPage() {
     setError(null)
 
     try {
+      // Call TrainerAI endpoint
+      await sendToTrainerAI('user', prompt)
+
       // Call the API to generate workout plan
       const workoutPlan = await generateWorkoutPlan(prompt)
 
