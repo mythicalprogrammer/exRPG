@@ -1,66 +1,31 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { generateWorkoutPlan, sendToTrainerAI } from '../services/api'
-import { saveWorkout, saveWorkoutHistory } from '../services/db'
-import type { Workout, BodyPart } from '../types'
+import { sendToAI } from '../services/api'
 
 export default function PromptPage() {
+  const [name, setName] = useState('')
   const [prompt, setPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const navigate = useNavigate()
+  const [response, setResponse] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!prompt.trim()) {
-      setError('Please enter a workout description')
+    if (!name.trim()) {
+      setError('Please enter your name')
       return
     }
 
     setIsLoading(true)
     setError(null)
+    setResponse(null)
 
     try {
-      // Call TrainerAI endpoint
-      await sendToTrainerAI('user', prompt)
-
-      // Call the API to generate workout plan
-      const workoutPlan = await generateWorkoutPlan(prompt)
-
-      // Create workout object
-      const today = new Date().toISOString()
-      const dateOnly = today.split('T')[0]
-
-      const workout: Workout = {
-        id: crypto.randomUUID(),
-        date: today,
-        prompt: prompt,
-        exercises: workoutPlan.exercises,
-        completed: false,
-        createdAt: today,
-        updatedAt: today
-      }
-
-      // Save to IndexedDB
-      await saveWorkout(workout)
-
-      // Extract unique body parts from exercises
-      const bodyParts = [...new Set(workoutPlan.exercises.map(ex => ex.bodyPart))] as BodyPart[]
-
-      // Save workout history for the heatmap
-      await saveWorkoutHistory({
-        id: crypto.randomUUID(),
-        date: dateOnly,
-        bodyParts,
-        workoutIds: [workout.id]
-      })
-
-      // Navigate to workout page
-      navigate('/workout', { state: { workoutId: workout.id } })
+      const result = await sendToAI(name, prompt || undefined)
+      setResponse(result.Hello)
     } catch (err) {
-      console.error('Error generating workout:', err)
-      setError('Failed to generate workout. Please try again.')
+      console.error('Error calling AI:', err)
+      setError('Failed to connect to AI. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -69,18 +34,33 @@ export default function PromptPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        <h1 className="text-4xl font-bold mb-8 text-center">Workout Planner</h1>
+        <h1 className="text-4xl font-bold mb-8 text-center">AI Assistant</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
+            <label htmlFor="name" className="block text-sm font-medium mb-2">
+              Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your name"
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
             <label htmlFor="prompt" className="block text-sm font-medium mb-2">
-              Describe your workout goals
+              Prompt (optional)
             </label>
             <textarea
               id="prompt"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g., I want to build upper body strength, focusing on chest and arms..."
+              placeholder="Enter your prompt..."
               className="w-full h-40 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               disabled={isLoading}
             />
@@ -92,21 +72,20 @@ export default function PromptPage() {
             </div>
           )}
 
+          {response && (
+            <div className="p-4 bg-green-900/50 border border-green-700 rounded-lg text-green-200">
+              <strong>Response:</strong> {response}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isLoading}
             className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
           >
-            {isLoading ? 'Generating Workout...' : 'Generate Workout Plan'}
+            {isLoading ? 'Sending...' : 'Send to AI'}
           </button>
         </form>
-
-        <button
-          onClick={() => navigate('/workout')}
-          className="mt-4 w-full py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
-        >
-          View Previous Workouts
-        </button>
       </div>
     </div>
   )
